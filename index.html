@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1.6" />
+    <title>Gameboy VRAM Tile Viewer</title>
+    <style>
+      body {
+        background-color: rgb(245, 255, 220);
+        font-family: Arial, Helvetica, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      canvas {
+        width: 384px;
+        height: 576px;
+        margin-top: 2px;
+        border: 2px solid black;
+      }
+      #centered_div {
+        margin: 0 auto;
+        padding-top: 30px;
+        width: 384px;
+      }
+      table {
+        border-collapse: collapse;
+        float: right;
+      }
+      th, td {
+        width: 30px;
+        height: 30px;
+      }
+      input[type="color"] {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+      }
+      input[type="file"] {
+        padding-top: 50px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="centered_div">
+      <span style="font-weight: bold;">Gameboy VRAM Tile Viewer</span>
+      <p></p>
+      <span>
+        Renders bytes from the input file as Gameboy tiles.
+        <p></p>
+        16 tiles per row. 24 tiles per column. 384 tiles total.
+        Expects a Gameboy VRAM tile dump. (8000-97FF)
+        Give it a 6,144 byte file or don't. What do I care?
+      </span>
+      <p></p>
+      <input type="file" id="TileFileInput" onchange="ReadTileFile()">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>0</th>
+            <th>1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>0</th>
+            <td><input type="color" value="#FFFFFF" onchange="ChangeColor(0, this)"></td>
+            <td><input type="color" value="#AAAAAA" onchange="ChangeColor(1, this)"></td>
+          </tr>
+          <tr>
+            <th>1</th>
+            <td><input type="color" value="#555555" onchange="ChangeColor(2, this)"></td>
+            <td><input type="color" value="#000000" onchange="ChangeColor(3, this)"></td>
+        </tr>
+        </tbody>
+      </table>
+      <canvas id="tileCanvas" width="384" height="576"></canvas>
+    </div>
+    <script>
+      const NUM_TILE_ROWS    = 24;
+      const NUM_TILE_COLUMNS = 16;
+      const BYTES_PER_TILE   = 16;
+
+      const CANVAS_WIDTH  = 128;
+      const CANVAS_HEIGHT = 192;
+      const SCALE         = 3;
+      
+      const TileFileReader = new FileReader();
+
+      const	CanvasObject           = document.getElementById("tileCanvas");
+      const CanvasObjectParameters = CanvasObject.getContext("2d");
+      const ImageObject            = CanvasObjectParameters.createImageData(CANVAS_WIDTH*SCALE, CANVAS_HEIGHT*SCALE);
+    
+      let FileLoaded = false;
+
+      let Colors = new Array(4);
+      Colors[0] = "#FFFFFF";
+      Colors[1] = "#AAAAAA";
+      Colors[2] = "#555555";
+      Colors[3] = "#000000";
+
+      let TileFile;
+  
+      let TilesData = new Array(CANVAS_HEIGHT);
+      for(let y = 0; y < TilesData.length; y+=1) {
+        TilesData[y] = new Array(CANVAS_WIDTH);
+      }
+
+      function ChangeColor(index, input) {
+        Colors[index] = input.value;
+
+        if(FileLoaded)
+          DrawTile();
+      }
+
+      function Clear()
+      {
+        for(let y = 0; y < TilesData.length; y+=1)
+          for(let x = 0; x < TilesData[y].length; x+=1)
+            TilesData[y][x] = 0;
+      }
+
+      
+      function RenderTiles() {
+        let tile_byte_index = 0;
+        for(let tile_row_mult = 0; tile_row_mult < NUM_TILE_ROWS; tile_row_mult += 1)
+        {
+          for(let tile_colum_mult = 0; tile_colum_mult < NUM_TILE_COLUMNS; tile_colum_mult += 1)
+          {
+            if((tile_byte_index + BYTES_PER_TILE) >= TileFile.byteLength)
+              return;
+
+            for(let tile_byte_offset = 0; tile_byte_offset < BYTES_PER_TILE; tile_byte_offset += 2)
+            {
+              for(let tile_column = 0; tile_column < 8; tile_column +=1)
+              {
+                let bit_0 = (TileFile.getUint8(tile_byte_index + tile_byte_offset + 0) & (1 << (7-tile_column))) ? 0b01 : 0b00;
+                let bit_1 = (TileFile.getUint8(tile_byte_index + tile_byte_offset + 1) & (1 << (7-tile_column))) ? 0b10 : 0b00;
+
+                TilesData[tile_byte_offset/2 + tile_row_mult*8][tile_column + tile_colum_mult*8] = bit_1 | bit_0;
+              }
+            }
+            tile_byte_index += BYTES_PER_TILE;
+          }
+        }
+      }
+
+      function GetTileColor(y, x) {
+        let color_code = Colors[TilesData[y][x]];
+        color_code = color_code.trim().replace(/^#/, '');
+
+        const r = parseInt(color_code.substring(0, 2), 16);
+        const g = parseInt(color_code.substring(2, 4), 16);
+        const b = parseInt(color_code.substring(4, 6), 16);
+
+        return { R: r, G: g, B: b };
+      }
+
+      function DrawTile() {
+        for (let y = 0; y < CANVAS_HEIGHT; y++) {
+          for (let x = 0; x < CANVAS_WIDTH; x++) {
+            for (let ys = 0; ys < SCALE; ys++) {
+              for (let xs = 0; xs < SCALE; xs++) {
+                let linearIndex = ((y * SCALE + ys) * CANVAS_WIDTH * SCALE + x * SCALE + xs) * 4;
+                let color = GetTileColor(y, x);
+
+                ImageObject.data[linearIndex + 0] = color.R;
+                ImageObject.data[linearIndex + 1] = color.G;
+                ImageObject.data[linearIndex + 2] = color.B;
+                ImageObject.data[linearIndex + 3] = 255;              
+              }
+            }
+          }
+        }
+        CanvasObjectParameters.putImageData(ImageObject, 0, 0);
+      }
+
+      function ReadTileFile() {
+        TileFileReader.onload = function () 
+        {
+          TileFile = new DataView(TileFileReader.result);
+          FileLoaded = true;
+
+          Clear();
+          RenderTiles();
+          DrawTile();
+        };
+        TileFileReader.readAsArrayBuffer(document.getElementById("TileFileInput").files[0]);
+      }
+    </script>
+  </body>
+</html>
