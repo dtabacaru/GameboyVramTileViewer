@@ -111,7 +111,7 @@
         Colors[index] = input.value;
 
         if(FileLoaded)
-          DrawTile();
+          DrawTiles();
       }
 
       function Clear(){
@@ -155,7 +155,7 @@
         return { R: r, G: g, B: b };
       }
 
-      function DrawTile() {
+      function DrawTiles() {
         for (let y = 0; y < CANVAS_HEIGHT; y++) {
           for (let x = 0; x < CANVAS_WIDTH; x++) {
             for (let ys = 0; ys < SCALE; ys++) {
@@ -182,7 +182,7 @@
 
           Clear();
           RenderTiles();
-          DrawTile();
+          DrawTiles();
         };
         TileFileReader.readAsArrayBuffer(document.getElementById("TileFileInput").files[0]);
       }
