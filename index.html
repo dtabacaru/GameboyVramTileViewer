@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1.6" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1.6" />
     <title>Gameboy VRAM Tile Viewer</title>
     <style>
       body {
@@ -88,7 +88,7 @@
       
       const TileFileReader = new FileReader();
 
-      const	CanvasObject           = document.getElementById("tileCanvas");
+      const CanvasObject           = document.getElementById("tileCanvas");
       const CanvasObjectParameters = CanvasObject.getContext("2d");
       const ImageObject            = CanvasObjectParameters.createImageData(CANVAS_WIDTH*SCALE, CANVAS_HEIGHT*SCALE);
     
@@ -114,21 +114,19 @@
           DrawTile();
       }
 
-      function Clear()
-      {
+      function Clear(){
         for(let y = 0; y < TilesData.length; y+=1)
           for(let x = 0; x < TilesData[y].length; x+=1)
             TilesData[y][x] = 0;
       }
 
-      
       function RenderTiles() {
         let tile_byte_index = 0;
         for(let tile_row_mult = 0; tile_row_mult < NUM_TILE_ROWS; tile_row_mult += 1)
         {
           for(let tile_colum_mult = 0; tile_colum_mult < NUM_TILE_COLUMNS; tile_colum_mult += 1)
           {
-            if((tile_byte_index + BYTES_PER_TILE) >= TileFile.byteLength)
+            if((tile_byte_index + BYTES_PER_TILE) > TileFile.byteLength)
               return;
 
             for(let tile_byte_offset = 0; tile_byte_offset < BYTES_PER_TILE; tile_byte_offset += 2)
